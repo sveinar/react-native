@@ -9,7 +9,7 @@
 
 'use strict';
 
-const {exec} = require('shelljs');
+const {exec, pwd} = require('shelljs');
 const os = require('os');
 const {spawn} = require('node:child_process');
 
@@ -73,6 +73,40 @@ function launchAndroidEmulator() {
   }
 }
 
+/*
+ * iOS related utils - leverages xcodebuild
+ */
+
+/*
+ * Metro related utils
+ */
+
+// inspired by CLI again https://github.com/react-native-community/cli/blob/main/packages/cli-tools/src/isPackagerRunning.ts
+
+function isPackagerRunning(
+  packagerPort = process.env.RCT_METRO_PORT || '8081',
+) {
+  try {
+    const status = exec(`curl http://localhost:${packagerPort}/status`, {
+      silent: true,
+    }).stdout;
+
+    return status === 'packager-status:running' ? 'running' : 'unrecognized';
+  } catch (_error) {
+    return 'not_running';
+  }
+}
+
+// this is a very limited implementation of how this should work
+// literally, this is macos only
+// a more robust implementation can be found here:
+// https://github.com/react-native-community/cli/blob/7c003f2b1d9d80ec5c167614ba533a004272c685/packages/cli-platform-android/src/commands/runAndroid/index.ts#L195
+function launchPackagesInSeparateWindow() {
+  exec("open -a 'Terminal' ./scripts/packager.sh");
+}
+
 module.exports = {
   launchAndroidEmulator,
+  isPackagerRunning,
+  launchPackagesInSeparateWindow,
 };

@@ -16,9 +16,14 @@
  * and to make it more accessible for other devs to play around with.
  */
 
-const {echo, exec, exit, pwd} = require('shelljs');
+const {exec, exit} = require('shelljs');
 const yargs = require('yargs');
-const {launchAndroidEmulator} = require('./testing-utils');
+
+const {
+  launchAndroidEmulator,
+  isPackagerRunning,
+  launchPackagesInSeparateWindow,
+} = require('./testing-utils');
 
 // const {isReleaseBranch, parseVersion} = require('./version-utils');
 
@@ -39,6 +44,17 @@ const argv = yargs
     default: true,
   }).argv;
 
+/* we probably want some form of cleanup ahead of running the command
+ * things to consider:
+ *  - clean up node modules
+ *  - clean up the build folder (derived data, gradlew cleanAll)
+ *  - clean up the pods folder (pod install) (and Podfile.lock too)
+ *  - kill all packagers
+ *
+ * other improvements to consider:
+ *   - an option to uninstall the app from emulators
+ */
+
 // command order: we ask the user to select if they want to test RN tester
 // or RNTestProject
 
@@ -46,11 +62,20 @@ const argv = yargs
 // if they select RNTestProject, we run the RNTestProject test
 
 if (argv.target === 'RNTester') {
+  // let's check if Metro is already running, if it is let's kill it and start fresh
+  if (isPackagerRunning() === 'running') {
+    exec(
+      "lsof -i :8081 | grep LISTEN | /usr/bin/awk '{print $2}' | xargs kill",
+    );
+  }
+
   if (argv.platform === 'iOS') {
     if (argv.hermes) {
       console.info("We're going to test the Hermes version of RNTester iOS");
+      exec('cd packages/rn-tester && USE_HERMES=1 bundle exec pod install');
     } else {
       console.info("We're going to test the JSC version of RNTester iOS");
+      exec('cd packages/rn-tester && USE_HERMES=0 bundle exec pod install');
     }
   } else {
     // we do the android path here
@@ -65,6 +90,10 @@ if (argv.target === 'RNTester') {
       console.info("We're going to test the JSC version of RNTester Android");
       exec('./gradlew :packages:rn-tester:android:app:installJscDebug');
     }
+
+    // if everything succeeded so far, we can launch Metro and the app
+    // start the Metro server in a separate window
+    launchPackagesInSeparateWindow();
     exec('adb shell am start -n com.facebook.react.uiapp/.RNTesterActivity');
   }
 } else {
