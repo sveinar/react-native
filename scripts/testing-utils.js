@@ -14,7 +14,7 @@ const os = require('os');
 const {spawn} = require('node:child_process');
 
 /*
- * Android related utils - leverages adb
+ * Android related utils - leverages android tooling
  */
 
 // this code is taken from the CLI repo, slightly readapted to our needs
@@ -25,52 +25,22 @@ const emulatorCommand = process.env.ANDROID_HOME
   ? `${process.env.ANDROID_HOME}/emulator/emulator`
   : 'emulator';
 
-// const adbCommand = process.env.ANDROID_HOME
-//   ? `${process.env.ANDROID_HOME}/platform-tools/adb`
-//   : 'adb';
-
-// /**
-//  * Parses the output of the 'adb devices' command
-//  */
-// function parseDevicesResult(result) {
-//   if (!result) {
-//     return [];
-//   }
-
-//   const devices = [];
-//   const lines = result.trim().split(/\r?\n/);
-
-//   for (let i = 0; i < lines.length; i++) {
-//     const words = lines[i].split(/[ ,\t]+/).filter(w => w !== '');
-
-//     if (words[1] === 'device') {
-//       devices.push(words[0]);
-//     }
-//   }
-//   return devices;
-// }
-
-// /**
-//  * Executes the commands needed to get a list of devices from ADB
-//  */
-// function getDevices() {
-//   try {
-//     const devicesResult = exec(`"${adbCommand}" devices`).stdout;
-//     return parseDevicesResult(devicesResult.toString());
-//   } catch (e) {
-//     return [];
-//   }
-// }
-
 const getEmulators = () => {
   const emulatorsOutput = exec(`${emulatorCommand} -list-avds`).stdout;
   return emulatorsOutput.split(os.EOL).filter(name => name !== '');
 };
 
-const launchEmulator = async emulatorName => {
-  console.log(`Launching emulator ${emulatorName}`);
-  // exec(`${emulatorCommand} -avd ${emulatorName}`, {async: true});
-  // spawn(`${emulatorCommand} -avd ${emulatorName}`, [], {detached: true});
+const launchEmulator = emulatorName => {
+  // we need both options 'cause reasons:
+  // from docs: "When using the detached option to start a long-running process, the process will not stay running in the background after the parent exits unless it is provided with a stdio configuration that is not connected to the parent. If the parent's stdio is inherited, the child will remain attached to the controlling terminal."
+  // here: https://nodejs.org/api/child_process.html#optionsdetached
+
+  const cp = spawn(emulatorCommand, [`@${emulatorName}`], {
+    detached: true,
+    stdio: 'ignore',
+  });
+
+  cp.unref();
 };
 
 function tryLaunchEmulator() {
