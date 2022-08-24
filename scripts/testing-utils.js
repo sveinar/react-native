@@ -45,7 +45,6 @@ const launchEmulator = emulatorName => {
 
 function tryLaunchEmulator() {
   const emulators = getEmulators();
-  console.log('emulators', emulators);
   if (emulators.length > 0) {
     try {
       launchEmulator(emulators[0]);

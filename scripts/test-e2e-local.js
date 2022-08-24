@@ -69,7 +69,9 @@ if (argv.target === 'RNTester') {
     );
   }
 
-  //TODO: make sure that the commands retains colors
+  //FIXME: make sure that the commands retains colors
+  // (--ansi) doesn't always work
+  // see also https://github.com/shelljs/shelljs/issues/86
 
   if (argv.platform === 'iOS') {
     if (argv.hermes) {
@@ -89,7 +91,6 @@ if (argv.target === 'RNTester') {
     launchPackagesInSeparateWindow();
 
     // launch the app on iOS simulator
-    // exec('cd packages/rn-tester && npx react-native run-ios');
     pushd('packages/rn-tester');
     exec('npx react-native run-ios --scheme RNTester');
     popd();
@@ -98,17 +99,16 @@ if (argv.target === 'RNTester') {
 
     launchAndroidEmulator();
 
-    // TODO: make the gradle command less verbose
     if (argv.hermes) {
       console.info(
         "We're going to test the Hermes version of RNTester Android",
       );
       exec(
-        './gradlew :packages:rn-tester:android:app:installHermesDebug --ansi',
+        './gradlew :packages:rn-tester:android:app:installHermesDebug --quiet',
       );
     } else {
       console.info("We're going to test the JSC version of RNTester Android");
-      exec('./gradlew :packages:rn-tester:android:app:installJscDebug --ansi');
+      exec('./gradlew :packages:rn-tester:android:app:installJscDebug --quiet');
     }
 
     // if everything succeeded so far, we can launch Metro and the app
@@ -117,7 +117,9 @@ if (argv.target === 'RNTester') {
     // just to make sure that the Android up won't have troubles finding the Metro server
     exec('adb reverse tcp:8081 tcp:8081');
     // launch the app
-    exec('adb shell am start -n com.facebook.react.uiapp/.MainActivity');
+    exec(
+      'adb shell am start -n com.facebook.react.uiapp/com.facebook.react.uiapp.RNTesterActivity',
+    );
   }
 } else {
   console.info("We're going to test a fresh new RN project");
