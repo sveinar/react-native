@@ -53,17 +53,19 @@ if (argv.target === 'RNTester') {
       console.info("We're going to test the JSC version of RNTester iOS");
     }
   } else {
+    // we do the android path here
+
+    launchAndroidEmulator();
     if (argv.hermes) {
       console.info(
         "We're going to test the Hermes version of RNTester Android",
       );
-      // add a command to start the android emulator
-      launchAndroidEmulator();
-      //   exec('./gradlew :packages:rn-tester:android:app:installHermesDebug');
-      //   exec('adb shell am start -n com.facebook.react.uiapp/.RNTesterActivity');
+      exec('./gradlew :packages:rn-tester:android:app:installHermesDebug');
     } else {
       console.info("We're going to test the JSC version of RNTester Android");
+      exec('./gradlew :packages:rn-tester:android:app:installJscDebug');
     }
+    exec('adb shell am start -n com.facebook.react.uiapp/.RNTesterActivity');
   }
 } else {
   console.info("We're going to test a fresh new RN project");
