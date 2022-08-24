@@ -16,7 +16,7 @@
  * and to make it more accessible for other devs to play around with.
  */
 
-const {exec, exit} = require('shelljs');
+const {exec, exit, pushd, popd} = require('shelljs');
 const yargs = require('yargs');
 
 const {
@@ -69,26 +69,46 @@ if (argv.target === 'RNTester') {
     );
   }
 
+  //TODO: make sure that the commands retains colors
+
   if (argv.platform === 'iOS') {
     if (argv.hermes) {
       console.info("We're going to test the Hermes version of RNTester iOS");
-      exec('cd packages/rn-tester && USE_HERMES=1 bundle exec pod install');
+      exec(
+        'cd packages/rn-tester && USE_HERMES=1 bundle exec pod install --ansi',
+      );
     } else {
       console.info("We're going to test the JSC version of RNTester iOS");
-      exec('cd packages/rn-tester && USE_HERMES=0 bundle exec pod install');
+      exec(
+        'cd packages/rn-tester && USE_HERMES=0 bundle exec pod install --ansi',
+      );
     }
+
+    // if everything succeeded so far, we can launch Metro and the app
+    // start the Metro server in a separate window
+    launchPackagesInSeparateWindow();
+
+    // launch the app on iOS simulator
+    // exec('cd packages/rn-tester && npx react-native run-ios');
+    pushd('packages/rn-tester');
+    exec('npx react-native run-ios --scheme RNTester');
+    popd();
   } else {
     // we do the android path here
 
     launchAndroidEmulator();
+
+    // TODO: make the gradle command less verbose
     if (argv.hermes) {
       console.info(
         "We're going to test the Hermes version of RNTester Android",
       );
-      exec('./gradlew :packages:rn-tester:android:app:installHermesDebug');
+      exec(
+        './gradlew :packages:rn-tester:android:app:installHermesDebug --ansi',
+      );
     } else {
       console.info("We're going to test the JSC version of RNTester Android");
-      exec('./gradlew :packages:rn-tester:android:app:installJscDebug');
+      exec('./gradlew :packages:rn-tester:android:app:installJscDebug --ansi');
     }
 
     // if everything succeeded so far, we can launch Metro and the app

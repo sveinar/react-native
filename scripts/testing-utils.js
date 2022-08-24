@@ -9,7 +9,7 @@
 
 'use strict';
 
-const {exec, pwd} = require('shelljs');
+const {exec} = require('shelljs');
 const os = require('os');
 const {spawn} = require('node:child_process');
 
