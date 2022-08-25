@@ -16,7 +16,7 @@
  * and to make it more accessible for other devs to play around with.
  */
 
-const {exec, exit, pushd, popd} = require('shelljs');
+const {exec, exit, pushd, popd, pwd} = require('shelljs');
 const yargs = require('yargs');
 
 const {
@@ -61,14 +61,14 @@ const argv = yargs
 // if they select RN tester, we ask if iOS or Android, and then we run the tests
 // if they select RNTestProject, we run the RNTestProject test
 
-if (argv.target === 'RNTester') {
-  // let's check if Metro is already running, if it is let's kill it and start fresh
-  if (isPackagerRunning() === 'running') {
-    exec(
-      "lsof -i :8081 | grep LISTEN | /usr/bin/awk '{print $2}' | xargs kill",
-    );
-  }
+// let's check if Metro is already running, if it is let's kill it and start fresh
+if (isPackagerRunning() === 'running') {
+  exec("lsof -i :8081 | grep LISTEN | /usr/bin/awk '{print $2}' | xargs kill");
+}
 
+console.log('argv', argv);
+
+if (argv.target === 'RNTester') {
   //FIXME: make sure that the commands retains colors
   // (--ansi) doesn't always work
   // see also https://github.com/shelljs/shelljs/issues/86
@@ -123,6 +123,33 @@ if (argv.target === 'RNTester') {
   }
 } else {
   console.info("We're going to test a fresh new RN project");
+
+  // remove the old project & archive if exists
+  exec('rm -rf /tmp/RNTestProject');
+  exec('rm -f ./*.tgz');
+
+  // create the local npm package to feed the CLI
+
+  // TODO: generate native files
+
+  // create locally the node module
+  const packageName = exec('npm pack').stdout.trim();
+
+  // we need to add the unique timestamp to avoid npm/yarn to use some local caches
+  const baseVersion = require('../package.json').version;
+
+  const dateIdentifier = new Date()
+    .toISOString()
+    .slice(0, -8)
+    .replace(/[-:]/g, '')
+    .replace(/[T]/g, '-');
+
+  const localNodeTGZPath = `${pwd()}/react-native-${baseVersion}-${dateIdentifier}.tgz`;
+
+  // rename the packageName to use releaseVersion
+  exec(`mv ${packageName} ${localNodeTGZPath}`);
+
+  exec(`node scripts/set-rn-template-version.js "file:${localNodeTGZPath}"`);
 }
 
 exit(0);
