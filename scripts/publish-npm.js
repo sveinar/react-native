@@ -31,8 +31,9 @@
  *     * or otherwise `{major}.{minor}-stable`
  */
 
-const {exec, echo, exit, test, env} = require('shelljs');
+const {exec, echo, exit} = require('shelljs');
 const {parseVersion, isTaggedLatest} = require('./version-utils');
+const {generateAndroidArtifacts} = require('./release-utils');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -170,46 +171,7 @@ if (isCommitly) {
   }
 }
 
-// -------- Generating Android Artifacts
-if (exec('./gradlew :ReactAndroid:installArchives').code) {
-  echo('Could not generate artifacts');
-  exit(1);
-}
-
-// -------- Generating the Hermes Engine Artifacts
-env.REACT_NATIVE_HERMES_SKIP_PREFAB = true;
-if (exec('./gradlew :ReactAndroid:hermes-engine:installArchives').code) {
-  echo('Could not generate artifacts');
-  exit(1);
-}
-
-// undo uncommenting javadoc setting
-exec('git checkout ReactAndroid/gradle.properties');
-
-echo('Generated artifacts for Maven');
-
-let artifacts = [
-  '.module',
-  '.pom',
-  '-debug.aar',
-  '-release.aar',
-  '-debug-sources.jar',
-  '-release-sources.jar',
-].map(suffix => {
-  return `react-native-${releaseVersion}${suffix}`;
-});
-
-artifacts.forEach(name => {
-  if (
-    !test(
-      '-e',
-      `./android/com/facebook/react/react-native/${releaseVersion}/${name}`,
-    )
-  ) {
-    echo(`Failing as expected file: ${name} was not correctly generated.`);
-    exit(1);
-  }
-});
+generateAndroidArtifacts(releaseVersion);
 
 if (dryRunBuild) {
   echo('Skipping `npm publish` because --dry-run is set.');
