@@ -25,6 +25,8 @@ const {
   launchPackagesInSeparateWindow,
 } = require('./testing-utils');
 
+const {generateAndroidArtifacts} = require('./release-utils');
+
 // const {isReleaseBranch, parseVersion} = require('./version-utils');
 
 const argv = yargs
@@ -130,11 +132,6 @@ if (argv.target === 'RNTester') {
 
   // create the local npm package to feed the CLI
 
-  // TODO: generate native files
-
-  // create locally the node module
-  const packageName = exec('npm pack').stdout.trim();
-
   // we need to add the unique timestamp to avoid npm/yarn to use some local caches
   const baseVersion = require('../package.json').version;
 
@@ -144,12 +141,41 @@ if (argv.target === 'RNTester') {
     .replace(/[-:]/g, '')
     .replace(/[T]/g, '-');
 
-  const localNodeTGZPath = `${pwd()}/react-native-${baseVersion}-${dateIdentifier}.tgz`;
+  const releaseVersion = `${baseVersion}-${dateIdentifier}`;
 
-  // rename the packageName to use releaseVersion
-  exec(`mv ${packageName} ${localNodeTGZPath}`);
+  // this is needed to generate the Android artifacts correctly
+  // FIXME: the problem is that this also causes the Hermes on iOS side to crash on pod install
+  // the problem is that it tries to pull down Hermes from GH Release of a version that doesn't exist yet
+  // need to check with cortinico how the current script manages to avoid this issue
+  // TODO: get back in main branch proper, test old script, see what is different in generation
+  exec(`node scripts/set-rn-version.js --to-version ${releaseVersion}`).code;
 
+  // Generate native files (Android only for now)
+  generateAndroidArtifacts(releaseVersion);
+
+  // create locally the node module
+  exec('npm pack');
+
+  const localNodeTGZPath = `${pwd()}/react-native-${releaseVersion}.tgz`;
   exec(`node scripts/set-rn-template-version.js "file:${localNodeTGZPath}"`);
+
+  const repoRoot = pwd();
+
+  pushd('/tmp/');
+  // need to avoid the pod install step because it will fail! (see above)
+  exec(`node ${repoRoot}/cli.js init RNTestProject --template ${repoRoot}`);
+  popd();
+
+  // now we can generate the new project via the CLI
+  console.info(
+    'New sample project correctly generated at /tmp/RNTestProject. Go test it out!',
+  );
+
+  // TODO: we need to add the ability to test the Android/iOS versions of the project
+
+  // at the end here I most likely want to set back the rn version to baseVersion!
+  // for git "cleanness" reasons
+  exec(`node scripts/set-rn-template-version.js ${baseVersion}`);
 }
 
 exit(0);
