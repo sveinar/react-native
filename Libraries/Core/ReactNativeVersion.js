@@ -12,6 +12,6 @@
 exports.version = {
   major: 0,
   minor: 64,
-  patch: 3,
-  prerelease: null,
+  patch: 2,
+  prerelease: 'yoga2',
 };
